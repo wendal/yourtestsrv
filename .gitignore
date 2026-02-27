@@ -1,0 +1,6 @@
+cmd.lnk
+.DS_Store
+*.log
+*.pem
+*.key
+yourtestsrv

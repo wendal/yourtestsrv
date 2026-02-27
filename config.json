@@ -1,0 +1,28 @@
+{
+  "server": {
+    "tcp": {
+      "port": 9000,
+      "delay": "0s",
+      "close_after": "0s"
+    },
+    "udp": {
+      "port": 9001,
+      "drop_rate": 0,
+      "delay": "0s"
+    },
+    "http": {
+      "port": 8080,
+      "slow_response": false,
+      "slow_duration": "0s",
+      "error_code": 200,
+      "chunked": false
+    },
+    "mqtt": {
+      "port": 1883,
+      "retain": false
+    }
+  },
+  "logging": {
+    "level": "info"
+  }
+}
