@@ -36,6 +36,7 @@ type Server struct {
 	SlowDuration time.Duration
 	ErrorCode    int
 	Chunked      bool
+	Bind         string
 	Handler      Handler
 }
 
@@ -50,7 +51,11 @@ func (f HandlerFunc) Handle(req *Request) *Response {
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -89,7 +94,11 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 }
 
 func (s *Server) ListenAndServeTLS(ctx context.Context, certFile, keyFile string) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -172,6 +181,7 @@ func (s *Server) handleConn(conn net.Conn) {
 			resp.Code = s.ErrorCode
 		}
 
+		conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 		if err := s.sendResponse(conn, resp); err != nil {
 			log.Printf("HTTP write error: %v", err)
 			return
@@ -282,6 +292,17 @@ func (s *Server) sendError(conn net.Conn, code int, message string) error {
 }
 
 func (s *Server) defaultHandle(req *Request) *Response {
+	if req.Path == "/healthz" {
+		return &Response{
+			Code:    200,
+			Message: "OK",
+			Headers: map[string]string{
+				"Content-Type": "text/plain",
+			},
+			Body: []byte("ok\n"),
+		}
+	}
+
 	body := fmt.Sprintf("Method: %s\nPath: %s\nVersion: %s\n", req.Method, req.Path, req.Version)
 
 	for k, v := range req.Headers {

@@ -16,6 +16,7 @@ type Server struct {
 	TLS        bool
 	Delay      time.Duration
 	CloseAfter time.Duration
+	Bind       string
 	Handler    Handler
 }
 
@@ -30,7 +31,11 @@ func (f HandlerFunc) Handle(conn net.Conn) {
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 	network := "tcp"
 
 	ln, err := net.Listen(network, addr)
@@ -54,6 +59,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		if err != nil {
 			select {
 			case <-ctx.Done():
+				wg.Wait()
 				return nil
 			default:
 				log.Printf("Accept error: %v", err)
@@ -70,7 +76,11 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 }
 
 func (s *Server) ListenAndServeTLS(ctx context.Context, certFile, keyFile string) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -102,6 +112,7 @@ func (s *Server) ListenAndServeTLS(ctx context.Context, certFile, keyFile string
 		if err != nil {
 			select {
 			case <-ctx.Done():
+				wg.Wait()
 				return nil
 			default:
 				log.Printf("Accept error: %v", err)
@@ -146,6 +157,7 @@ func (s *Server) defaultHandle(conn net.Conn) {
 			time.Sleep(s.Delay)
 		}
 
+		conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		n, err := conn.Read(buf)
 		if err != nil {
 			if err == io.EOF {
@@ -159,6 +171,7 @@ func (s *Server) defaultHandle(conn net.Conn) {
 		data := buf[:n]
 		log.Printf("TCP received from %s: %x", conn.RemoteAddr(), data)
 
+		conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 		_, err = conn.Write(data)
 		if err != nil {
 			log.Printf("TCP write error: %v", err)

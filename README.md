@@ -64,6 +64,9 @@ go build -o yourtestsrv cmd/server/main.go
 
 ```bash
 ./yourtestsrv serve-all --config config.json
+
+# 仅监听本机
+./yourtestsrv serve-all --bind 127.0.0.1 --config config.json
 ```
 
 ### 启动所有服务 (加密)
@@ -126,6 +129,7 @@ go build -o yourtestsrv cmd/server/main.go
 ```json
 {
   "server": {
+    "bind": "0.0.0.0",
     "tcp": {
       "port": 9000,
       "delay": "0s",
@@ -185,6 +189,9 @@ openssl s_client -connect localhost:9443
 ```bash
 # GET 请求
 curl http://localhost:8080/
+
+# 健康检查
+curl http://localhost:8080/healthz
 
 # 慢响应测试
 curl -w "%{time_total}\n" http://localhost:8080/slow

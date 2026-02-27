@@ -12,6 +12,7 @@ type Config struct {
 }
 
 type ServerConfig struct {
+	Bind string     `json:"bind"`
 	TCP  TCPConfig  `json:"tcp"`
 	UDP  UDPConfig  `json:"udp"`
 	HTTP HTTPConfig `json:"http"`
@@ -99,6 +100,7 @@ func Load(path string) (*Config, error) {
 func Default() *Config {
 	return &Config{
 		Server: ServerConfig{
+			Bind: "0.0.0.0",
 			TCP: TCPConfig{
 				Port:    9000,
 				TLSPort: 9443,

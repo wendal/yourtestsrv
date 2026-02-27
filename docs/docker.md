@@ -24,6 +24,14 @@ docker run --rm \
   yourtestsrv:latest
 ```
 
+## Health check
+
+The HTTP server exposes a plain-text health endpoint:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
 ## TLS mode
 
 To use TLS, mount `cert.pem` and `key.pem` and override the command:
@@ -43,3 +51,4 @@ docker run --rm \
 - The image runs as a non-root user.
 - UDP requires `/udp` in the port mapping.
 - TLS ports are base port +10000.
+- To bind on localhost only, add `--bind 127.0.0.1` to the command.

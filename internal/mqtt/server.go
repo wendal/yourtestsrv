@@ -76,6 +76,7 @@ type Server struct {
 	Port           int
 	RetainMessages bool
 	Handler        Handler
+	Bind           string
 	clients        sync.Map
 	retained       map[string][]byte
 }
@@ -119,7 +120,11 @@ func NewServer(port int) *Server {
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -158,7 +163,11 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 }
 
 func (s *Server) ListenAndServeTLS(ctx context.Context, certFile, keyFile string) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -224,6 +233,7 @@ func (s *Server) handleConn(conn net.Conn) {
 			return
 		}
 
+		conn.SetWriteDeadline(time.Now().Add(60 * time.Second))
 		s.handlePacket(conn, packet)
 	}
 }

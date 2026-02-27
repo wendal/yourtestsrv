@@ -47,6 +47,18 @@ systemctl status yourtestsrv
 journalctl -u yourtestsrv -f
 ```
 
+## Health check
+
+The HTTP server exposes a plain-text health endpoint:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+## Bind address
+
+To bind only on localhost, add `--bind 127.0.0.1` to `ExecStart`.
+
 ## TLS mode
 
 To run TLS servers, change `ExecStart` to `serve-all-tls` and ensure

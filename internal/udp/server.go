@@ -14,6 +14,7 @@ type Server struct {
 	Port     int
 	DropRate float64
 	Delay    time.Duration
+	Bind     string
 	Handler  Handler
 }
 
@@ -28,7 +29,11 @@ func (f HandlerFunc) Handle(addr *net.UDPAddr, data []byte) []byte {
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	bind := s.Bind
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, s.Port)
 
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
@@ -96,6 +101,7 @@ func (s *Server) handlePacket(conn *net.UDPConn, addr *net.UDPAddr, data []byte)
 	}
 
 	if len(response) > 0 {
+		conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 		conn.WriteToUDP(response, addr)
 	}
 }

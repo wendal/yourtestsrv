@@ -80,6 +80,7 @@ func run() error {
 func handleServeAll(args []string, mode string) error {
 	fs := flag.NewFlagSet("serve-all", flag.ContinueOnError)
 	configFile := fs.String("config", "config.json", "Config file (JSON)")
+	bind := fs.String("bind", "", "Bind address")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -87,12 +88,19 @@ func handleServeAll(args []string, mode string) error {
 		return err
 	}
 	applyConfigDefaults()
+	if *bind != "" {
+		cfg.Server.Bind = *bind
+	}
+	if cfg.Server.Bind == "" {
+		cfg.Server.Bind = "0.0.0.0"
+	}
 	return startAllServers(mode)
 }
 
 func handleTCP(args []string) error {
 	fs := flag.NewFlagSet("tcp", flag.ContinueOnError)
 	configFile := fs.String("config", "config.json", "Config file (JSON)")
+	bind := fs.String("bind", "", "Bind address")
 	port := fs.Int("port", 0, "TCP port")
 	portShort := fs.Int("p", 0, "TCP port")
 	useTLS := fs.Bool("tls", false, "Enable TLS")
@@ -106,6 +114,12 @@ func handleTCP(args []string) error {
 		return err
 	}
 	applyConfigDefaults()
+	if *bind != "" {
+		cfg.Server.Bind = *bind
+	}
+	if cfg.Server.Bind == "" {
+		cfg.Server.Bind = "0.0.0.0"
+	}
 	if *port == 0 && *portShort != 0 {
 		*port = *portShort
 	}
@@ -127,6 +141,7 @@ func handleTCP(args []string) error {
 		TLS:        *useTLS,
 		Delay:      *delay,
 		CloseAfter: *closeAfter,
+		Bind:       cfg.Server.Bind,
 	}
 	if !*echo {
 		srv.Handler = tcpServer.HandlerFunc(func(conn net.Conn) {
@@ -148,6 +163,7 @@ func handleTCP(args []string) error {
 func handleUDP(args []string) error {
 	fs := flag.NewFlagSet("udp", flag.ContinueOnError)
 	configFile := fs.String("config", "config.json", "Config file (JSON)")
+	bind := fs.String("bind", "", "Bind address")
 	port := fs.Int("port", 0, "UDP port")
 	portShort := fs.Int("p", 0, "UDP port")
 	dropRate := fs.Float64("drop-rate", 0, "Packet drop rate (0-1)")
@@ -160,6 +176,12 @@ func handleUDP(args []string) error {
 		return err
 	}
 	applyConfigDefaults()
+	if *bind != "" {
+		cfg.Server.Bind = *bind
+	}
+	if cfg.Server.Bind == "" {
+		cfg.Server.Bind = "0.0.0.0"
+	}
 	if *port == 0 && *portShort != 0 {
 		*port = *portShort
 	}
@@ -176,6 +198,7 @@ func handleUDP(args []string) error {
 		Port:     *port,
 		DropRate: *dropRate,
 		Delay:    *delay,
+		Bind:     cfg.Server.Bind,
 	}
 	if !*echo {
 		srv.Handler = udpServer.HandlerFunc(func(addr *net.UDPAddr, data []byte) []byte {
@@ -188,6 +211,7 @@ func handleUDP(args []string) error {
 func handleHTTP(args []string) error {
 	fs := flag.NewFlagSet("http", flag.ContinueOnError)
 	configFile := fs.String("config", "config.json", "Config file (JSON)")
+	bind := fs.String("bind", "", "Bind address")
 	port := fs.Int("port", 0, "HTTP port")
 	portShort := fs.Int("p", 0, "HTTP port")
 	useTLS := fs.Bool("tls", false, "Enable TLS")
@@ -202,6 +226,12 @@ func handleHTTP(args []string) error {
 		return err
 	}
 	applyConfigDefaults()
+	if *bind != "" {
+		cfg.Server.Bind = *bind
+	}
+	if cfg.Server.Bind == "" {
+		cfg.Server.Bind = "0.0.0.0"
+	}
 	if *port == 0 && *portShort != 0 {
 		*port = *portShort
 	}
@@ -231,6 +261,7 @@ func handleHTTP(args []string) error {
 		SlowDuration: *slowDuration,
 		ErrorCode:    *errorCode,
 		Chunked:      *chunked,
+		Bind:         cfg.Server.Bind,
 	}
 	if *useTLS {
 		return srv.ListenAndServeTLS(ctx, "cert.pem", "key.pem")
@@ -241,6 +272,7 @@ func handleHTTP(args []string) error {
 func handleMQTT(args []string) error {
 	fs := flag.NewFlagSet("mqtt", flag.ContinueOnError)
 	configFile := fs.String("config", "config.json", "Config file (JSON)")
+	bind := fs.String("bind", "", "Bind address")
 	port := fs.Int("port", 0, "MQTT port")
 	portShort := fs.Int("p", 0, "MQTT port")
 	useTLS := fs.Bool("tls", false, "Enable TLS")
@@ -253,6 +285,12 @@ func handleMQTT(args []string) error {
 		return err
 	}
 	applyConfigDefaults()
+	if *bind != "" {
+		cfg.Server.Bind = *bind
+	}
+	if cfg.Server.Bind == "" {
+		cfg.Server.Bind = "0.0.0.0"
+	}
 	if *port == 0 && *portShort != 0 {
 		*port = *portShort
 	}
@@ -271,6 +309,7 @@ func handleMQTT(args []string) error {
 	}
 	srv := mqttServer.NewServer(*port)
 	srv.RetainMessages = *retain
+	srv.Bind = cfg.Server.Bind
 	if *useTLS {
 		return srv.ListenAndServeTLS(ctx, "cert.pem", "key.pem")
 	}
@@ -322,6 +361,7 @@ func startAllServers(mode string) error {
 				Port:       cfg.Server.TCP.Port,
 				Delay:      cfg.Server.TCP.Delay.Duration,
 				CloseAfter: cfg.Server.TCP.CloseAfter.Duration,
+				Bind:       cfg.Server.Bind,
 			}
 			if err := tcpSrv.ListenAndServe(ctx); err != nil && err != context.Canceled {
 				log.Printf("TCP server error: %v", err)
@@ -336,6 +376,7 @@ func startAllServers(mode string) error {
 				TLS:        true,
 				Delay:      cfg.Server.TCP.Delay.Duration,
 				CloseAfter: cfg.Server.TCP.CloseAfter.Duration,
+				Bind:       cfg.Server.Bind,
 			}
 			if err := tcpTLSSrv.ListenAndServeTLS(ctx, certFile, keyFile); err != nil && err != context.Canceled {
 				log.Printf("TCP TLS server error: %v", err)
@@ -348,6 +389,7 @@ func startAllServers(mode string) error {
 			Port:     cfg.Server.UDP.Port,
 			DropRate: cfg.Server.UDP.DropRate,
 			Delay:    cfg.Server.UDP.Delay.Duration,
+			Bind:     cfg.Server.Bind,
 		}
 		if err := udpSrv.ListenAndServe(ctx); err != nil && err != context.Canceled {
 			log.Printf("UDP server error: %v", err)
@@ -362,6 +404,7 @@ func startAllServers(mode string) error {
 				SlowDuration: cfg.Server.HTTP.SlowDuration.Duration,
 				ErrorCode:    cfg.Server.HTTP.ErrorCode,
 				Chunked:      cfg.Server.HTTP.Chunked,
+				Bind:         cfg.Server.Bind,
 			}
 			if err := httpSrv.ListenAndServe(ctx); err != nil && err != context.Canceled {
 				log.Printf("HTTP server error: %v", err)
@@ -377,6 +420,7 @@ func startAllServers(mode string) error {
 				SlowDuration: cfg.Server.HTTP.SlowDuration.Duration,
 				ErrorCode:    cfg.Server.HTTP.ErrorCode,
 				Chunked:      cfg.Server.HTTP.Chunked,
+				Bind:         cfg.Server.Bind,
 			}
 			if err := httpTLSSrv.ListenAndServeTLS(ctx, certFile, keyFile); err != nil && err != context.Canceled {
 				log.Printf("HTTP TLS server error: %v", err)
@@ -388,6 +432,7 @@ func startAllServers(mode string) error {
 		go func() {
 			mqttSrv := mqttServer.NewServer(cfg.Server.MQTT.Port)
 			mqttSrv.RetainMessages = cfg.Server.MQTT.Retain
+			mqttSrv.Bind = cfg.Server.Bind
 			if err := mqttSrv.ListenAndServe(ctx); err != nil && err != context.Canceled {
 				log.Printf("MQTT server error: %v", err)
 			}
@@ -398,6 +443,7 @@ func startAllServers(mode string) error {
 		go func() {
 			mqttTLSSrv := mqttServer.NewServer(cfg.Server.MQTT.TLSPort)
 			mqttTLSSrv.RetainMessages = cfg.Server.MQTT.Retain
+			mqttTLSSrv.Bind = cfg.Server.Bind
 			if err := mqttTLSSrv.ListenAndServeTLS(ctx, certFile, keyFile); err != nil && err != context.Canceled {
 				log.Printf("MQTT TLS server error: %v", err)
 			}
@@ -432,6 +478,7 @@ Commands:
 
 Global options:
   --config <path>  Config file (JSON)
+  --bind <addr>    Bind address (default: 0.0.0.0)
 `
 	fmt.Println(msg)
 }
