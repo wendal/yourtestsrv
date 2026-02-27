@@ -1,0 +1,21 @@
+[Unit]
+Description=yourtestsrv network test server
+After=network.target
+
+[Service]
+Type=simple
+User=yourtestsrv
+Group=yourtestsrv
+WorkingDirectory=/etc/yourtestsrv
+ExecStart=/usr/local/bin/yourtestsrv serve-all --config /etc/yourtestsrv/config.json
+Restart=on-failure
+RestartSec=2
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/etc/yourtestsrv
+
+[Install]
+WantedBy=multi-user.target

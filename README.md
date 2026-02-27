@@ -55,6 +55,11 @@ go build -o yourtestsrv cmd/server/main.go
 ./yourtestsrv --help
 ```
 
+### 部署说明
+
+- systemd: `docs/systemd.md`
+- Docker: `docs/docker.md`
+
 ### 启动所有服务 (非加密)
 
 ```bash
