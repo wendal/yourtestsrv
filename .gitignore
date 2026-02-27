@@ -4,3 +4,4 @@ cmd.lnk
 *.pem
 *.key
 yourtestsrv
+dist/
