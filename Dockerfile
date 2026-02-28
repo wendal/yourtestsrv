@@ -1,20 +1,14 @@
-FROM golang:1.21 AS builder
+FROM python:3.11-slim
 
-WORKDIR /src
-COPY go.mod ./
-COPY cmd ./cmd
-COPY internal ./internal
+WORKDIR /app
 
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/yourtestsrv cmd/server/main.go
-
-FROM gcr.io/distroless/static:nonroot
-
-COPY --from=builder /out/yourtestsrv /usr/local/bin/yourtestsrv
+COPY yourtestsrv/ ./yourtestsrv/
+COPY yourtestsrv.py ./
 COPY config.json /etc/yourtestsrv/config.json
 
-USER nonroot:nonroot
+USER nobody:nogroup
 
 EXPOSE 9000 9001 8080 1883
 
-ENTRYPOINT ["yourtestsrv"]
+ENTRYPOINT ["python", "yourtestsrv.py"]
 CMD ["serve-all", "--config", "/etc/yourtestsrv/config.json"]
