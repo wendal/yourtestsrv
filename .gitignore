@@ -6,3 +6,6 @@ cmd.lnk
 yourtestsrv
 dist/
 server.exe
+__pycache__/
+*.py[cod]
+.pytest_cache/
