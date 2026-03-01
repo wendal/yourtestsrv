@@ -18,7 +18,6 @@ class TCPServer:
     def _serve(self, sock, stop_event):
         sock.settimeout(1.0)
         logger.info(f'TCP server listening on {self.bind}:{self.port}')
-        threads = []
         try:
             while not stop_event.is_set():
                 try:
@@ -29,7 +28,6 @@ class TCPServer:
                     break
                 t = threading.Thread(target=self._handle_conn, args=(conn, addr), daemon=True)
                 t.start()
-                threads.append(t)
         finally:
             sock.close()
 
@@ -50,7 +48,6 @@ class TCPServer:
         sock.listen(128)
         sock.settimeout(1.0)
         logger.info(f'TCP TLS server listening on {self.bind}:{self.port}')
-        threads = []
         try:
             while not stop_event.is_set():
                 try:
@@ -59,15 +56,16 @@ class TCPServer:
                     continue
                 except OSError:
                     break
+                conn.settimeout(5.0)
                 try:
                     tls_conn = ctx.wrap_socket(conn, server_side=True)
+                    tls_conn.settimeout(None)
                 except ssl.SSLError as e:
                     logger.debug(f'TCP TLS handshake error from {addr}: {e}')
                     conn.close()
                     continue
                 t = threading.Thread(target=self._handle_conn, args=(tls_conn, addr), daemon=True)
                 t.start()
-                threads.append(t)
         finally:
             sock.close()
 

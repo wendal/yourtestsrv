@@ -16,6 +16,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pytest
+        run: pip install pytest cryptography
       - name: Python test
         run: python -m pytest tests/ -v

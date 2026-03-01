@@ -100,7 +100,9 @@ class MQTTServer:
                 except OSError:
                     break
                 try:
+                    conn.settimeout(5.0)
                     tls_conn = ctx.wrap_socket(conn, server_side=True)
+                    tls_conn.settimeout(None)
                 except ssl.SSLError as e:
                     logger.debug(f'MQTT TLS handshake error from {addr}: {e}')
                     conn.close()
@@ -129,13 +131,18 @@ class MQTTServer:
 
         length = 0
         multiplier = 1
+        num_bytes = 0
         while True:
+            if num_bytes >= 4:
+                logger.warning('MQTT Remaining Length exceeds 4-byte limit, closing connection')
+                return None
             b_bytes = self._recv_exact(conn, 1)
             if not b_bytes:
                 return None
             b = b_bytes[0]
             length += (b & 127) * multiplier
             multiplier *= 128
+            num_bytes += 1
             if (b & 128) == 0:
                 break
 
@@ -161,6 +168,10 @@ class MQTTServer:
         except (ConnectionResetError, BrokenPipeError, OSError, socket.timeout):
             pass
         finally:
+            with self._lock:
+                to_remove = [cid for cid, c in self._clients.items() if c is conn]
+                for cid in to_remove:
+                    del self._clients[cid]
             try:
                 conn.close()
             except Exception:
@@ -200,6 +211,9 @@ class MQTTServer:
         protocol_name, pos = _read_mqtt_string(payload, pos)
         if protocol_name is None:
             return
+        if pos + 4 > len(payload):
+            logger.warning(f'Malformed MQTT CONNECT from {addr}: payload too short')
+            return
         protocol_level = payload[pos]; pos += 1
         connect_flags = payload[pos]; pos += 1
         keep_alive = struct.unpack_from('>H', payload, pos)[0]; pos += 2
@@ -223,6 +237,9 @@ class MQTTServer:
         qos = (flags >> 1) & 0x03
         packet_id = 0
         if qos > 0:
+            if len(payload) - pos < 2:
+                logger.warning('Malformed MQTT PUBLISH: insufficient bytes for packet ID')
+                return
             packet_id = struct.unpack_from('>H', payload, pos)[0]
             pos += 2
         msg_payload = payload[pos:]

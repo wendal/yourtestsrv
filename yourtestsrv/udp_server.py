@@ -3,6 +3,7 @@ import threading
 import time
 import random
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class UDPServer:
         sock.bind((self.bind, self.port))
         sock.settimeout(1.0)
         logger.info(f'UDP server listening on {self.bind}:{self.port}')
+        executor = ThreadPoolExecutor(max_workers=32)
         try:
             while not stop_event.is_set():
                 try:
@@ -29,10 +31,10 @@ class UDPServer:
                     continue
                 except OSError:
                     break
-                t = threading.Thread(target=self._handle_packet, args=(sock, addr, data), daemon=True)
-                t.start()
+                executor.submit(self._handle_packet, sock, addr, data)
         finally:
             sock.close()
+            executor.shutdown(wait=False)
 
     def _handle_packet(self, sock, addr, data):
         if self.drop_rate > 0 and random.random() < self.drop_rate:

@@ -77,7 +77,9 @@ class HTTPServer:
                 except OSError:
                     break
                 try:
+                    conn.settimeout(5.0)
                     tls_conn = ctx.wrap_socket(conn, server_side=True)
+                    tls_conn.settimeout(None)
                 except ssl.SSLError as e:
                     logger.debug(f'HTTP TLS handshake error from {addr}: {e}')
                     conn.close()
@@ -110,7 +112,7 @@ class HTTPServer:
                 if self.error_code > 0 and self.error_code != 200:
                     resp.code = self.error_code
                 self._send_response(conn, resp)
-                if req.headers.get('Connection', '').lower() == 'close':
+                if req.headers.get('connection', '').lower() == 'close':
                     return
         except (ConnectionResetError, BrokenPipeError, OSError):
             pass
@@ -149,10 +151,10 @@ class HTTPServer:
                 break
             if ':' in hline:
                 k, v = hline.split(':', 1)
-                headers[k.strip()] = v.strip()
+                headers[k.strip().lower()] = v.strip()
 
         body = b''
-        content_length = int(headers.get('Content-Length', 0))
+        content_length = int(headers.get('content-length', 0))
         if content_length > 0:
             while len(buf) < content_length:
                 chunk = conn.recv(4096)

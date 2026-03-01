@@ -3,12 +3,18 @@ import re
 
 
 def parse_duration(s):
-    """Parse Go duration string like '5s', '200ms', '1m30s' to seconds (float)."""
+    """Parse Go duration string like '5s', '200ms', '1m30s' to seconds (float).
+
+    Raises ValueError for strings that are not valid duration syntax.
+    """
     if not s or s == '0' or s == '0s':
         return 0.0
     total = 0.0
     pattern = re.compile(r'(\d+(?:\.\d+)?)(ns|us|µs|ms|s|m|h)')
+    matched_end = 0
     for m in pattern.finditer(s):
+        if m.start() != matched_end:
+            raise ValueError(f'invalid duration string: {s!r}')
         val, unit = float(m.group(1)), m.group(2)
         if unit == 'ns':
             total += val * 1e-9
@@ -22,6 +28,9 @@ def parse_duration(s):
             total += val * 60
         elif unit == 'h':
             total += val * 3600
+        matched_end = m.end()
+    if matched_end != len(s):
+        raise ValueError(f'invalid duration string: {s!r}')
     return total
 
 

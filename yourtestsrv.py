@@ -65,6 +65,9 @@ def cmd_serve_all(args, mode):
     threads = []
 
     cert_file, key_file = 'cert.pem', 'key.pem'
+    tls_available = os.path.exists(cert_file) and os.path.exists(key_file)
+    if not tls_available and mode in ('both', 'tls'):
+        logger.warning(f'TLS cert/key not found ({cert_file}, {key_file}), TLS servers will not start')
 
     def start(fn, *a):
         t = threading.Thread(target=fn, args=a, daemon=True)
@@ -80,7 +83,7 @@ def cmd_serve_all(args, mode):
         start(MQTTServer(cfg.server.mqtt.port, cfg.server.bind,
                          cfg.server.mqtt.retain).listen_and_serve, stop_event)
 
-    if mode in ('both', 'tls'):
+    if mode in ('both', 'tls') and tls_available:
         start(TCPServer(cfg.server.tcp.tls_port, cfg.server.bind,
                         cfg.server.tcp.delay, cfg.server.tcp.close_after).listen_and_serve_tls,
               stop_event, cert_file, key_file)
@@ -111,16 +114,16 @@ def cmd_tcp(args):
     parser.add_argument('--bind', default='')
     parser.add_argument('--port', '-p', type=int, default=0)
     parser.add_argument('--tls', action='store_true')
-    parser.add_argument('--delay', default='0s')
-    parser.add_argument('--close-after', default='0s')
+    parser.add_argument('--delay', default=None)
+    parser.add_argument('--close-after', default=None)
     opts = parser.parse_args(args)
     c = load_config(opts.config)
     apply_defaults(c)
     bind = opts.bind or c.server.bind
     port = opts.port or (c.server.tcp.tls_port if opts.tls else c.server.tcp.port)
     from yourtestsrv.config import parse_duration
-    delay = parse_duration(opts.delay) or c.server.tcp.delay
-    close_after = parse_duration(opts.close_after) or c.server.tcp.close_after
+    delay = parse_duration(opts.delay) if opts.delay is not None else c.server.tcp.delay
+    close_after = parse_duration(opts.close_after) if opts.close_after is not None else c.server.tcp.close_after
     srv = TCPServer(port, bind, delay, close_after)
     stop_event = make_stop_event()
     if opts.tls:
@@ -134,16 +137,16 @@ def cmd_udp(args):
     parser.add_argument('--config', default='config.json')
     parser.add_argument('--bind', default='')
     parser.add_argument('--port', '-p', type=int, default=0)
-    parser.add_argument('--drop-rate', type=float, default=0.0)
-    parser.add_argument('--delay', default='0s')
+    parser.add_argument('--drop-rate', type=float, default=None)
+    parser.add_argument('--delay', default=None)
     opts = parser.parse_args(args)
     c = load_config(opts.config)
     apply_defaults(c)
     bind = opts.bind or c.server.bind
     port = opts.port or c.server.udp.port
     from yourtestsrv.config import parse_duration
-    drop_rate = opts.drop_rate or c.server.udp.drop_rate
-    delay = parse_duration(opts.delay) or c.server.udp.delay
+    drop_rate = opts.drop_rate if opts.drop_rate is not None else c.server.udp.drop_rate
+    delay = parse_duration(opts.delay) if opts.delay is not None else c.server.udp.delay
     srv = UDPServer(port, bind, drop_rate, delay)
     stop_event = make_stop_event()
     srv.listen_and_serve(stop_event)
@@ -155,20 +158,20 @@ def cmd_http(args):
     parser.add_argument('--bind', default='')
     parser.add_argument('--port', '-p', type=int, default=0)
     parser.add_argument('--tls', action='store_true')
-    parser.add_argument('--slow-response', action='store_true')
-    parser.add_argument('--slow-duration', default='0s')
-    parser.add_argument('--error-code', type=int, default=0)
-    parser.add_argument('--chunked', action='store_true')
+    parser.add_argument('--slow-response', action='store_true', default=None)
+    parser.add_argument('--slow-duration', default=None)
+    parser.add_argument('--error-code', type=int, default=None)
+    parser.add_argument('--chunked', action='store_true', default=None)
     opts = parser.parse_args(args)
     c = load_config(opts.config)
     apply_defaults(c)
     bind = opts.bind or c.server.bind
     port = opts.port or (c.server.http.tls_port if opts.tls else c.server.http.port)
     from yourtestsrv.config import parse_duration
-    slow_response = opts.slow_response or c.server.http.slow_response
-    slow_duration = parse_duration(opts.slow_duration) or c.server.http.slow_duration
-    error_code = opts.error_code or c.server.http.error_code
-    chunked = opts.chunked or c.server.http.chunked
+    slow_response = c.server.http.slow_response if opts.slow_response is None else opts.slow_response
+    slow_duration = parse_duration(opts.slow_duration) if opts.slow_duration is not None else c.server.http.slow_duration
+    error_code = opts.error_code if opts.error_code is not None else c.server.http.error_code
+    chunked = c.server.http.chunked if opts.chunked is None else opts.chunked
     srv = HTTPServer(port, bind, slow_response, slow_duration, error_code, chunked)
     stop_event = make_stop_event()
     if opts.tls:
@@ -183,13 +186,17 @@ def cmd_mqtt(args):
     parser.add_argument('--bind', default='')
     parser.add_argument('--port', '-p', type=int, default=0)
     parser.add_argument('--tls', action='store_true')
-    parser.add_argument('--retain', '-r', action='store_true')
+    parser.add_argument('--retain', '-r', dest='retain', action='store_true',
+                        help='Enable MQTT message retain')
+    parser.add_argument('--no-retain', dest='retain', action='store_false',
+                        help='Disable MQTT message retain')
+    parser.set_defaults(retain=None)
     opts = parser.parse_args(args)
     c = load_config(opts.config)
     apply_defaults(c)
     bind = opts.bind or c.server.bind
     port = opts.port or (c.server.mqtt.tls_port if opts.tls else c.server.mqtt.port)
-    retain = opts.retain or c.server.mqtt.retain
+    retain = opts.retain if opts.retain is not None else c.server.mqtt.retain
     srv = MQTTServer(port, bind, retain)
     stop_event = make_stop_event()
     if opts.tls:
@@ -205,8 +212,8 @@ Usage:
   yourtestsrv.py <command> [options]
 
 Commands:
-  serve-all        Start all servers (non-encrypted)
-  serve-all-tls    Start all servers (TLS encrypted)
+  serve-all        Start all servers (plaintext and TLS where supported)
+  serve-all-tls    Start all supported servers with TLS (UDP remains plaintext)
   tcp              Start TCP server
   udp              Start UDP server
   http             Start HTTP server
