@@ -17,7 +17,7 @@ from yourtestsrv.mqtt_server import MQTTServer
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
-VERSION = 'v1.0.0'
+VERSION = 'v1.1.0'
 
 
 def load_config(path):
