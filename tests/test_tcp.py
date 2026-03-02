@@ -109,7 +109,7 @@ class TestTCPEcho(unittest.TestCase):
                     conn.settimeout(0.5)
                     data = conn.recv(16)
                     self.assertEqual(data, b'', 'expected connection close')
-                except (ConnectionResetError, BrokenPipeError, socket.timeout):
+                except (ConnectionResetError, BrokenPipeError, socket.timeout, ConnectionAbortedError):
                     pass
         finally:
             stop.set()

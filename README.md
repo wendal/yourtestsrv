@@ -43,16 +43,20 @@
 - 客户端 ID 验证
 - 异常包处理
 
-## 编译
+## 运行
+
+由于本项目使用纯 Python 3 编写，无需编译即可直接运行：
 
 ```bash
-go build -o yourtestsrv cmd/server/main.go
+python yourtestsrv.py --help
 ```
+
+> **注意**：建议使用 Python 3.11 或以上版本。由于全部使用 Python 标准库，因此无需安装任何第三方运行时依赖（测试除外）。
 
 ## 使用方法
 
 ```bash
-./yourtestsrv --help
+python yourtestsrv.py --help
 ```
 
 ### 部署说明
@@ -63,63 +67,63 @@ go build -o yourtestsrv cmd/server/main.go
 ### 启动所有服务 (非加密)
 
 ```bash
-./yourtestsrv serve-all --config config.json
+python yourtestsrv.py serve-all --config config.json
 
 # 仅监听本机
-./yourtestsrv serve-all --bind 127.0.0.1 --config config.json
+python yourtestsrv.py serve-all --bind 127.0.0.1 --config config.json
 ```
 
 ### 启动所有服务 (加密)
 
 ```bash
-./yourtestsrv serve-all-tls --config config.json
+python yourtestsrv.py serve-all-tls --config config.json
 ```
 
 ### 启动单个服务
 
 ```bash
 # TCP
-./yourtestsrv tcp --port 9000 --config config.json
+python yourtestsrv.py tcp --port 9000 --config config.json
 
 # TCP TLS
-./yourtestsrv tcp --port 9443 --tls --config config.json
+python yourtestsrv.py tcp --port 9443 --tls --config config.json
 
 # UDP
-./yourtestsrv udp --port 9001 --config config.json
+python yourtestsrv.py udp --port 9001 --config config.json
 
 # HTTP
-./yourtestsrv http --port 8080 --config config.json
+python yourtestsrv.py http --port 8080 --config config.json
 
 # HTTP TLS
-./yourtestsrv http --port 8443 --tls --config config.json
+python yourtestsrv.py http --port 8443 --tls --config config.json
 
 # MQTT
-./yourtestsrv mqtt --port 1883 --config config.json
+python yourtestsrv.py mqtt --port 1883 --config config.json
 
 # MQTT TLS
-./yourtestsrv mqtt --port 8883 --tls --config config.json
+python yourtestsrv.py mqtt --port 8883 --tls --config config.json
 ```
 
 ### 特殊场景选项
 
 ```bash
 # TCP 延迟响应 (5秒)
-./yourtestsrv tcp --port 9000 --delay 5s --config config.json
+python yourtestsrv.py tcp --port 9000 --delay 5s --config config.json
 
 # TCP 主动断开连接
-./yourtestsrv tcp --port 9000 --close-after 3s --config config.json
+python yourtestsrv.py tcp --port 9000 --close-after 3s --config config.json
 
 # HTTP 慢响应
-./yourtestsrv http --port 8080 --slow-response --slow-duration 30s --config config.json
+python yourtestsrv.py http --port 8080 --slow-response --slow-duration 30s --config config.json
 
 # HTTP 错误状态码
-./yourtestsrv http --port 8080 --error-code 500 --config config.json
+python yourtestsrv.py http --port 8080 --error-code 500 --config config.json
 
 # UDP 包丢失模拟 (50%)
-./yourtestsrv udp --port 9001 --drop-rate 0.5 --config config.json
+python yourtestsrv.py udp --port 9001 --drop-rate 0.5 --config config.json
 
 # MQTT 保留消息
-./yourtestsrv mqtt --port 1883 --retain --config config.json
+python yourtestsrv.py mqtt --port 1883 --retain --config config.json
 ```
 
 ## 配置
@@ -215,17 +219,16 @@ mosquitto_sub -t "test/#" -v --cafile cert.pem
 
 ```
 yourtestsrv/
-├── cmd/
-│   └── server/
-│       └── main.go
-├── internal/
-│   ├── config/
-│   ├── tcp/
-│   ├── udp/
-│   ├── http/
-│   ├── mqtt/
-│   └── tls/
-├── config.json
-├── go.mod
-└── README.md
+├── yourtestsrv.py        # CLI 入口与服务器启动
+├── yourtestsrv/          # 核心模块
+│   ├── __init__.py
+│   ├── config.py
+│   ├── tcp_server.py
+│   ├── udp_server.py
+│   ├── http_server.py
+│   └── mqtt_server.py
+├── tests/                # pytest 测试集
+├── config.json           # 默认配置文件示例
+├── README.md
+└── CHANGELOG.md
 ```
